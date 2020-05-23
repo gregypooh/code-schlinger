@@ -7,7 +7,6 @@ import React from "react"
 export default () => (
   <>
     Personal blog by Greg Berger
-    <br />
-    Let's schling some code!
+    <br />I write about code schlingin'
   </>
 )
