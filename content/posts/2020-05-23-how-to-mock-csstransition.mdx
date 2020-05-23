@@ -1,0 +1,90 @@
+---
+title: How to mock CSSTransition
+date: 2020-05-15
+slug: how-to-mock-csstransition
+---
+
+#### TL;DR
+
+When testing, mock `CSSTransition` by adding the class(es) that `CSSTransion` would have added to your component, like so:
+
+```jsx
+addClass(content.getDOMNode(), "transitionClass-enter-done")
+// read more to find out about addClass
+```
+
+#### Let's go!
+
+import ExhibitA from "../components/2020-05-23-how-to-mock-csstransition/ExhibitA"
+
+I assume you're here because you've used `CSSTransition` in a component you'd like to test, but you don't want the test to wait for the animation to complete.
+
+For example, this silly little component changes the opacity of its text when you hover over it:
+
+```jsx
+import React, { useState } from "react"
+import { CSSTransition } from "react-transition-group"
+import styled from "styled-components"
+
+const appearDuration = 300
+export const transitionClass = "hover"
+
+const ExhibitA = () => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <CSSTransition
+      in={isHovered}
+      timeout={appearDuration}
+      classNames={transitionClass}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <StyledText data-testid="hovered-content">
+        Hover me to change opacity
+      </StyledText>
+    </CSSTransition>
+  )
+}
+
+export default ExhibitA
+
+const StyledText = styled.span`
+  opacity: 0.5;
+  &.${transitionClass}-enter-done {
+    opacity: 1;
+  }
+  transition: opacity ${appearDuration}ms ease;
+`
+```
+
+Here's the component, rendered:
+
+<ExhibitA />
+
+Notice that when the transition is complete, the `CSSTransition` component adds a class `${transitionClass}-enter-done` to its child component. This is effectively the main output of `CSSTransition` &mdash; new classes.
+
+So, when you're testing your component you can mock how `CSSTransition` works by simply adding/removing these classes to your component. The package [dom-helpers](https://www.npmjs.com/package/dom-helpers) has a handy function `addClass` that does exactly what it sounds like it does &mdash; adds a class to a DOM node.
+
+If I'm using Jest/Enzyme my test would look something like:
+
+```jsx
+import React from "react"
+import { mount } from "enzyme"
+import addClass from "dom-helpers/addClass"
+import ExhibitA, { transitionClass } from "../ExhibitA"
+
+describe("<ExhibitA />", () => {
+  it("increases the opacity when hovered", () => {
+    const wrapper = mount(<ExhibitA />)
+    const content = wrapper.find("[data-testid='hovered-content']")
+    // this line effectively mocks CSSTransition
+    addClass(content.getDOMNode(), `${transitionClass}-enter-done`)
+    // after this^ point you can make whatever assertions you needed to make
+    const containerStyle = content.style
+    expect(containerStyle).to.have.property("opacity", "1")
+  })
+})
+```
+
+This is a bit of a contrived example, but hopefully I made the point clear!
