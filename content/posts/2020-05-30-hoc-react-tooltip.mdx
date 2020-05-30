@@ -1,0 +1,129 @@
+---
+title: How to create a tooltip in React as a HOC
+date: 2020-05-30
+slug: hoc-react-tooltip
+---
+
+import { Link } from "gatsby"
+
+import Tooltip from "../components/2020-05-30-hoc-react-tooltip/Tooltip"
+
+## TL;DR
+
+We will build this tooltip as a higher order component.
+
+```jsx
+<Tooltip
+  content={"Here's more info that we couldn't figure out how else to convey."}
+>
+  Hover me
+</Tooltip>
+```
+
+Rendered:
+
+<Tooltip
+  content={"Here's more info that we couldn't figure out how else to convey."}
+>
+  Hover me
+</Tooltip>
+
+<br />
+<br />
+<br />
+
+## Let's go!
+
+You know 'em, you love 'em: let's build a tooltip!
+
+If you're a lazy developer like me, when my design team asked me to implement a tooltip the first thing I did was search for existing packages. Don't get me wrong, the existing packages are great, but they didn't exactly suit my needs, and might not suit yours either. Here's my beef with some of the popular tooltip packages:
+
+### Beef
+
+1. Some packages require you to handle the showing and hiding of the tooltip. I want the tooltip component to handle that for me &mdash; I like the black box approach, and again I'm lazy.
+1. Several packages only allowed the content of the tooltip to be a string. I want the flexibility to pass in any component.
+1. They come pre-styled so I would either need to override those styles (and hope I cover all edge cases) or be at the mercy of their styling API.
+1. These packages thoughtfully added a bunch of options to suit most use cases, but I will likely never use these options so, that equates to a bunch of unused code that the user needs to download.
+1. I didn't build it (wink).
+
+### HOC justification
+
+To handle beef #1 and beef #2 (black box approach and content flexibility) I used a higher order component (HOC). Here's what our `Tooltip` component will look like in psuedo-code action:
+
+```jsx
+<Tooltip content={TooltipContentComponentOrWhatever}>
+  <ThingThatGetsHovered />
+</Tooltip>
+```
+
+Notice that since I'm passing in the content to be displayed in the tooltip as a `prop` it can be anything: a component, a string, whatever tickles your fancy!
+
+Also notice that since your are passing the thing that triggers the tooltip to display as `children` to the HOC, the `Tooltip` component will be able to respond to hover events on its `children`.
+
+### How to respond to hover
+
+There are several ways for `Tooltip` to respond to a hover event on it's `children` prop. The first choice would be to use basic CSS: simply add a `:hover` style to the `children`. I decided not to go down this route because I wanted to fade in the tooltip and since I'm writing tests on this component I did not want my test to have to wait for the animation to complete. One of the easiest ways to mock animations is to use and mock `CSSTransition`. Check out my article on <Link to="/how-to-mock-csstransition">mocking CSSTransition</Link> if you want to learn more about that. Short story long, we will be using `CSSTransition` in this example.
+
+### Let's schling code!
+
+Here's a stripped down version of the tooltip without any styling:
+
+```jsx
+import React, { useState } from "react"
+import { CSSTransition } from "react-transition-group"
+
+const NakedTooltip = ({ content, children }) => {
+  // we need state here so we can trigger CSSTransition
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <div className={className}>
+      <CSSTransition in={isHovered} timeout={300} classNames={"tooltip"}>
+        {/*
+        You can wrap content in a div and style it any way you want 
+        */}
+        {content}
+      </CSSTransition>
+      {/*
+      We can control hover states on children by using native mouse events
+      */}
+      <div
+        onMouseEnter={() => {
+          setIsHovered(true)
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false)
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export default NakedTooltip
+```
+
+And to use this we would do:
+
+```jsx
+<NakedTooltip
+  content={"Here's more info that we couldn't figure out how else to convey."}
+>
+  Hover me
+</NakedTooltip>
+```
+
+I love how simple and straight-forward the API for this component is!
+
+Here's a styled version of the tooltip rendered:
+
+<Tooltip
+  content={"Here's more info that we couldn't figure out how else to convey."}
+>
+  Hover me
+</Tooltip>
+<br />
+<br />
+
+Here's a <a href="https://github.com/gregypooh/code-schlinger/tree/master/content/components/2020-05-30-hoc-react-tooltip/Tooltip.js" target="_blank">link</a> to the fully styled `Tooltip` using `styled-components`.
